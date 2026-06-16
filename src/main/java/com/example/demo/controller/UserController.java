@@ -1,6 +1,5 @@
 package com.example.demo.controller;
 
-
 import java.util.List;
 import java.util.Map;
 
@@ -17,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.demo.dto.CreateUserRequest;
 import com.example.demo.dto.UserDTO;
 import com.example.demo.entity.Role;
 import com.example.demo.entity.User;
@@ -73,23 +73,31 @@ public class UserController {
     }
     
     @PostMapping("/create")
-    public ResponseEntity<?> createUser(@Valid @RequestBody User user, Authentication authentication) {
+    public ResponseEntity<?> createUser(
+            @Valid @RequestBody CreateUserRequest request,
+            Authentication authentication) {
+
         User currentUser = (User) authentication.getPrincipal();
-        
-        // Only Admin can create users
+
         if (currentUser.getRole() != Role.ADMIN) {
-            return ResponseEntity.status(403).body(Map.of("error", "Only Admin can create users"));
+            return ResponseEntity.status(403)
+                    .body(Map.of("error", "Only Admin can create users"));
         }
-        
+
         try {
-            User createdUser = userService.createUser(user);
-            UserDTO userDTO = userService.getUserById(createdUser.getId());
-            return ResponseEntity.ok(userDTO);
+            UserDTO userDTO = userService.createUser(request);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "User created successfully",
+                    "user", userDTO
+            ));
+
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
         }
     }
-    
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUser(@PathVariable Long id, @Valid @RequestBody User user, Authentication authentication) {
         User currentUser = (User) authentication.getPrincipal();

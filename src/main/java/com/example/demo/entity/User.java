@@ -47,6 +47,11 @@ public class User implements UserDetails {
     
     @Column(length = 20)
     private String phone;
+    @Column(name = "password_change_required")
+    private boolean passwordChangeRequired = true;
+
+    @Column(name = "last_password_reset")
+    private LocalDateTime lastPasswordReset;
     
     @Column(name = "is_active")
     private boolean isActive = true;
