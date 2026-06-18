@@ -48,7 +48,7 @@ public class User implements UserDetails {
     @Column(length = 20)
     private String phone;
     @Column(name = "password_change_required")
-    private boolean passwordChangeRequired = true;
+    private Boolean passwordChangeRequired = true;
 
     @Column(name = "last_password_reset")
     private LocalDateTime lastPasswordReset;
@@ -65,6 +65,10 @@ public class User implements UserDetails {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_id")
     private User manager;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
     
     @PrePersist
     protected void onCreate() {

@@ -1,22 +1,22 @@
 package com.example.demo.service;
 
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
-
+import com.example.demo.dto.FollowUpDTO;
+import com.example.demo.dto.LeadFollowUpDTO;
+import com.example.demo.entity.FollowUp;
+import com.example.demo.entity.Lead;
+import com.example.demo.entity.User;
+import com.example.demo.entity.FollowUpStatus;
+import com.example.demo.repository.FollowUpRepository;
+import com.example.demo.repository.LeadRepository;
+import com.example.demo.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.demo.dto.FollowUpDTO;
-import com.example.demo.entity.FollowUp;
-import com.example.demo.entity.FollowUpStatus;
-import com.example.demo.entity.Lead;
-import com.example.demo.entity.User;
-import com.example.demo.repository.FollowUpRepository;
-import com.example.demo.repository.LeadRepository;
-import com.example.demo.repository.UserRepository;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class FollowUpService {
@@ -30,6 +30,7 @@ public class FollowUpService {
     @Autowired
     private UserRepository userRepository;
     
+    // ✅ CREATE
     @Transactional
     public FollowUpDTO createFollowUp(FollowUp followUp, Long leadId, Long userId) {
         Lead lead = leadRepository.findById(leadId)
@@ -40,7 +41,6 @@ public class FollowUpService {
         followUp.setLead(lead);
         followUp.setUser(user);
         
-        // Update lead stage if changed
         if (followUp.getStage() != null) {
             lead.setCurrentStage(followUp.getStage());
             leadRepository.save(lead);
@@ -50,28 +50,127 @@ public class FollowUpService {
         return convertToDTO(savedFollowUp);
     }
     
-    public List<FollowUpDTO> getFollowUpsByLead(Long leadId) {
-        Lead lead = leadRepository.findById(leadId)
-            .orElseThrow(() -> new RuntimeException("Lead not found with id: " + leadId));
-        return followUpRepository.findByLead(lead).stream()
+    // ✅ GET ALL LEADS WITH THEIR FOLLOW-UPS (ADMIN)
+    public List<LeadFollowUpDTO> getAllLeadsWithFollowUps() {
+        List<Lead> leads = leadRepository.findAll();
+        List<LeadFollowUpDTO> result = new ArrayList<>();
+        
+        for (Lead lead : leads) {
+            LeadFollowUpDTO dto = new LeadFollowUpDTO();
+            dto.setLeadId(lead.getId());
+            dto.setLeadName(lead.getName());
+            dto.setLeadEmail(lead.getEmail());
+            dto.setLeadCompany(lead.getCompany());
+            dto.setLeadStage(lead.getCurrentStage() != null ? lead.getCurrentStage().toString() : "N/A");
+            dto.setAssignedToName(lead.getAssignedTo() != null ? lead.getAssignedTo().getName() : "Unassigned");
+            
+            List<FollowUpDTO> followUps = followUpRepository.findByLeadId(lead.getId()).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+            dto.setFollowUps(followUps);
+            
+            result.add(dto);
+        }
+        
+        return result;
+    }
+    
+    // ✅ GET TEAM LEADS WITH FOLLOW-UPS (MANAGER)
+    public List<LeadFollowUpDTO> getTeamLeadsWithFollowUps(Long managerId) {
+        List<Lead> leads = leadRepository.findLeadsByManagerId(managerId);
+        List<LeadFollowUpDTO> result = new ArrayList<>();
+        
+        for (Lead lead : leads) {
+            LeadFollowUpDTO dto = new LeadFollowUpDTO();
+            dto.setLeadId(lead.getId());
+            dto.setLeadName(lead.getName());
+            dto.setLeadEmail(lead.getEmail());
+            dto.setLeadCompany(lead.getCompany());
+            dto.setLeadStage(lead.getCurrentStage() != null ? lead.getCurrentStage().toString() : "N/A");
+            dto.setAssignedToName(lead.getAssignedTo() != null ? lead.getAssignedTo().getName() : "Unassigned");
+            
+            List<FollowUpDTO> followUps = followUpRepository.findByLeadId(lead.getId()).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+            dto.setFollowUps(followUps);
+            
+            result.add(dto);
+        }
+        
+        return result;
+    }
+    
+    // ✅ GET USER LEADS WITH FOLLOW-UPS (EMPLOYEE)
+    public List<LeadFollowUpDTO> getUserLeadsWithFollowUps(Long userId) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        List<Lead> leads = leadRepository.findByAssignedTo(user);
+        List<LeadFollowUpDTO> result = new ArrayList<>();
+        
+        for (Lead lead : leads) {
+            LeadFollowUpDTO dto = new LeadFollowUpDTO();
+            dto.setLeadId(lead.getId());
+            dto.setLeadName(lead.getName());
+            dto.setLeadEmail(lead.getEmail());
+            dto.setLeadCompany(lead.getCompany());
+            dto.setLeadStage(lead.getCurrentStage() != null ? lead.getCurrentStage().toString() : "N/A");
+            dto.setAssignedToName(lead.getAssignedTo() != null ? lead.getAssignedTo().getName() : "Unassigned");
+            
+            List<FollowUpDTO> followUps = followUpRepository.findByLeadId(lead.getId()).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+            dto.setFollowUps(followUps);
+            
+            result.add(dto);
+        }
+        
+        return result;
+    }
+    
+    // ✅ GET ALL FOLLOW-UPS (Admin only)
+    public List<FollowUpDTO> getAllFollowUps() {
+        return followUpRepository.findAll().stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
     }
     
+    // ✅ GET ALL PENDING FOLLOW-UPS (Admin)
+    public List<FollowUpDTO> getAllPendingFollowUps() {
+        LocalDateTime now = LocalDateTime.now();
+        List<FollowUp> followUps = followUpRepository.findAllPendingFollowUps(now);
+        return followUps.stream()
+            .map(this::convertToDTO)
+            .collect(Collectors.toList());
+    }
+    
+    // ✅ GET FOLLOW-UPS BY LEAD
+    public List<FollowUpDTO> getFollowUpsByLead(Long leadId) {
+        List<FollowUp> followUps = followUpRepository.findByLeadId(leadId);
+        return followUps.stream()
+            .map(this::convertToDTO)
+            .collect(Collectors.toList());
+    }
+    
+    // ✅ GET PENDING FOLLOW-UPS FOR A USER
     public List<FollowUpDTO> getPendingFollowUpsByUser(Long userId) {
         LocalDateTime now = LocalDateTime.now();
-        return followUpRepository.findPendingFollowUpsByUser(userId, now).stream()
+        List<FollowUp> followUps = followUpRepository.findPendingFollowUpsByUser(userId, now);
+        return followUps.stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
     }
     
+    // ✅ GET TEAM PENDING FOLLOW-UPS (Manager)
     public List<FollowUpDTO> getTeamPendingFollowUps(Long managerId) {
         LocalDateTime now = LocalDateTime.now();
-        return followUpRepository.findTeamPendingFollowUps(managerId, now).stream()
+        List<FollowUp> followUps = followUpRepository.findTeamPendingFollowUps(managerId, now);
+        return followUps.stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
     }
     
+    // ✅ COMPLETE FOLLOW-UP
     @Transactional
     public FollowUpDTO completeFollowUp(Long id) {
         FollowUp followUp = followUpRepository.findById(id)
@@ -80,21 +179,28 @@ public class FollowUpService {
         followUp.setStatus(FollowUpStatus.COMPLETED);
         followUp.setCompletedDate(LocalDateTime.now());
         
-        // Schedule next follow-up if needed
         if (followUp.getNextFollowUp() != null) {
-            FollowUp nextFollowUp = new FollowUp();
-            nextFollowUp.setLead(followUp.getLead());
-            nextFollowUp.setUser(followUp.getUser());
-            nextFollowUp.setType(followUp.getType());
-            nextFollowUp.setScheduledDate(followUp.getNextFollowUp());
-            nextFollowUp.setStage(followUp.getStage());
-            followUpRepository.save(nextFollowUp);
+            FollowUp next = new FollowUp();
+            next.setLead(followUp.getLead());
+            next.setUser(followUp.getUser());
+            next.setType(followUp.getType());
+            next.setStage(followUp.getStage());
+            next.setScheduledDate(followUp.getNextFollowUp());
+            next.setStatus(FollowUpStatus.PENDING);
+            followUpRepository.save(next);
         }
         
         FollowUp updatedFollowUp = followUpRepository.save(followUp);
         return convertToDTO(updatedFollowUp);
     }
     
+    // ✅ DELETE FOLLOW-UP (Admin only)
+    @Transactional
+    public void deleteFollowUp(Long id) {
+        followUpRepository.deleteById(id);
+    }
+    
+    // ✅ CONVERT TO DTO
     private FollowUpDTO convertToDTO(FollowUp followUp) {
         FollowUpDTO dto = new FollowUpDTO();
         dto.setId(followUp.getId());

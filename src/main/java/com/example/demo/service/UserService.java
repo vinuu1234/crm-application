@@ -1,6 +1,5 @@
 package com.example.demo.service;
 
-
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,174 +19,139 @@ import com.example.demo.util.EmailService;
 
 @Service
 public class UserService {
-    
-    @Autowired
-    private UserRepository userRepository;
-    
-    @Autowired
-    private EmailService emailService;
-    
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    
-    @Transactional
-    public UserDTO createUser(CreateUserRequest request) {
 
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
-        }
+	@Autowired
+	private UserRepository userRepository;
 
-        User user = new User();
+	@Autowired
+	private EmailService emailService;
 
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
-        user.setRole(request.getRole());
-        user.setDepartment(request.getDepartment());
-        user.setPhone(request.getPhone());
+	@Autowired
+	private PasswordEncoder passwordEncoder;
 
-        String tempPassword = generateTemporaryPassword();
+	@Transactional
+	public UserDTO createUser(CreateUserRequest request) {
 
-        user.setPassword(
-                passwordEncoder.encode(tempPassword)
-        );
+		if (userRepository.existsByEmail(request.getEmail())) {
+			throw new RuntimeException("Email already exists");
+		}
 
-        user.setPasswordChangeRequired(true);
-        user.setActive(true);
+		User user = new User();
 
-  
-        User savedUser = userRepository.save(user);
+		user.setName(request.getName());
+		user.setEmail(request.getEmail());
+		user.setRole(request.getRole());
+		user.setDepartment(request.getDepartment());
+		user.setPhone(request.getPhone());
 
-        emailService.sendWelcomeEmail(
-                savedUser.getEmail(),
-                tempPassword
-        );
+		String tempPassword = generateTemporaryPassword();
 
-        System.out.println(
-                "Temporary Password for "
-                        + savedUser.getEmail()
-                        + " : "
-                        + tempPassword
-        );
+		user.setPassword(passwordEncoder.encode(tempPassword));
 
-        System.out.println(
-                "Temporary Password for "
-                        + savedUser.getEmail()
-                        + " : "
-                        + tempPassword
-        );
+		user.setPasswordChangeRequired(true);
+		user.setActive(true);
 
-        return getUserById(savedUser.getId());
-    }
-    
-    
-    @Transactional
-    public void changePassword(
-            String email,
-            ChangePasswordRequest request) {
+		User savedUser = userRepository.save(user);
 
-        User user =
-                userRepository.findByEmail(email)
-                        .orElseThrow();
+		emailService.sendWelcomeEmail(savedUser.getEmail(), tempPassword);
 
-        if (!passwordEncoder.matches(
-                request.getOldPassword(),
-                user.getPassword())) {
+		System.out.println("Temporary Password for " + savedUser.getEmail() + " : " + tempPassword);
 
-            throw new RuntimeException(
-                    "Old password incorrect");
-        }
+		System.out.println("Temporary Password for " + savedUser.getEmail() + " : " + tempPassword);
 
-        user.setPassword(
-                passwordEncoder.encode(
-                        request.getNewPassword()));
+		return getUserById(savedUser.getId());
+	}
 
-        user.setPasswordChangeRequired(false);
+	@Transactional
+	public void changePassword(String email, ChangePasswordRequest request) {
 
-        userRepository.save(user);
-    }
-    private String generateTemporaryPassword() {
+		User user = userRepository.findByEmail(email).orElseThrow();
 
-        String chars =
-                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$";
+		if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
 
-        SecureRandom random = new SecureRandom();
+			throw new RuntimeException("Old password incorrect");
+		}
 
-        StringBuilder password = new StringBuilder();
+		user.setPassword(passwordEncoder.encode(request.getNewPassword()));
 
-        for (int i = 0; i < 10; i++) {
-            password.append(
-                    chars.charAt(
-                            random.nextInt(chars.length())
-                    )
-            );
-        }
+		user.setPasswordChangeRequired(false);
 
-        return password.toString();
-    }
-    public List<UserDTO> getAllUsers() {
-        return userRepository.findAll().stream()
-            .map(this::convertToDTO)
-            .collect(Collectors.toList());
-    }
-    
-    public UserDTO getUserById(Long id) {
-        User user = userRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
-        return convertToDTO(user);
-    }
-    
-    public List<UserDTO> getUsersByRole(Role role) {
-        return userRepository.findByRole(role).stream()
-            .map(this::convertToDTO)
-            .collect(Collectors.toList());
-    }
-    
-    public List<UserDTO> getTeamMembers(Long managerId) {
-        return userRepository.findByManagerId(managerId).stream()
-            .map(this::convertToDTO)
-            .collect(Collectors.toList());
-    }
-    
-    @Transactional
-    public UserDTO updateUser(Long id, User userDetails) {
-        User user = userRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
-        
-        user.setName(userDetails.getName());
-        user.setDepartment(userDetails.getDepartment());
-        user.setPhone(userDetails.getPhone());
-        user.setRole(userDetails.getRole());
-        
-        if (userDetails.getManager() != null) {
-            user.setManager(userDetails.getManager());
-        }
-        
-        User updatedUser = userRepository.save(user);
-        return convertToDTO(updatedUser);
-    }
-    
-    @Transactional
-    public void deleteUser(Long id) {
-        userRepository.deleteById(id);
-    }
-    
-    private UserDTO convertToDTO(User user) {
-        UserDTO dto = new UserDTO();
-        dto.setId(user.getId());
-        dto.setName(user.getName());
-        dto.setEmail(user.getEmail());
-        dto.setRole(user.getRole());
-        dto.setDepartment(user.getDepartment());
-        dto.setPhone(user.getPhone());
-        dto.setActive(user.isEnabled());
-        dto.setCreatedAt(user.getCreatedAt());
-        
-        if (user.getManager() != null) {
-            dto.setManagerId(user.getManager().getId());
-            dto.setManagerName(user.getManager().getName());
-        }
-        
-        return dto;
-    }
-   
+		userRepository.save(user);
+	}
+
+	private String generateTemporaryPassword() {
+
+		String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$";
+
+		SecureRandom random = new SecureRandom();
+
+		StringBuilder password = new StringBuilder();
+
+		for (int i = 0; i < 10; i++) {
+			password.append(chars.charAt(random.nextInt(chars.length())));
+		}
+
+		return password.toString();
+	}
+
+	public List<UserDTO> getAllUsers() {
+		return userRepository.findAll().stream().map(this::convertToDTO).collect(Collectors.toList());
+	}
+
+	public UserDTO getUserById(Long id) {
+		User user = userRepository.findById(id)
+				.orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+		return convertToDTO(user);
+	}
+
+	public List<UserDTO> getUsersByRole(Role role) {
+		return userRepository.findByRole(role).stream().map(this::convertToDTO).collect(Collectors.toList());
+	}
+
+	public List<UserDTO> getTeamMembers(Long managerId) {
+		return userRepository.findByManagerId(managerId).stream().map(this::convertToDTO).collect(Collectors.toList());
+	}
+
+	@Transactional
+	public UserDTO updateUser(Long id, User userDetails) {
+		User user = userRepository.findById(id)
+				.orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+
+		user.setName(userDetails.getName());
+		user.setDepartment(userDetails.getDepartment());
+		user.setPhone(userDetails.getPhone());
+		user.setRole(userDetails.getRole());
+
+		if (userDetails.getManager() != null) {
+			user.setManager(userDetails.getManager());
+		}
+
+		User updatedUser = userRepository.save(user);
+		return convertToDTO(updatedUser);
+	}
+
+	@Transactional
+	public void deleteUser(Long id) {
+		userRepository.deleteById(id);
+	}
+
+	private UserDTO convertToDTO(User user) {
+		UserDTO dto = new UserDTO();
+		dto.setId(user.getId());
+		dto.setName(user.getName());
+		dto.setEmail(user.getEmail());
+		dto.setRole(user.getRole());
+		dto.setDepartment(user.getDepartment());
+		dto.setPhone(user.getPhone());
+		dto.setActive(user.isEnabled());
+		dto.setCreatedAt(user.getCreatedAt());
+
+		if (user.getManager() != null) {
+			dto.setManagerId(user.getManager().getId());
+			dto.setManagerName(user.getManager().getName());
+		}
+
+		return dto;
+	}
+
 }

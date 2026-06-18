@@ -49,14 +49,12 @@ public class SecurityConfig {
                 .requestMatchers("/api/dashboard/**").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
                 .anyRequest().authenticated()
             )
-            .formLogin(form -> form
-                .loginProcessingUrl("/api/auth/login")
-                .usernameParameter("email")
-                .passwordParameter("password")
-                .successHandler(authenticationSuccessHandler())
-                .failureHandler(authenticationFailureHandler())
-                .permitAll()
-            )
+				/*
+				 * .formLogin(form -> form .loginProcessingUrl("/api/auth/login")
+				 * .usernameParameter("email") .passwordParameter("password")
+				 * .successHandler(authenticationSuccessHandler())
+				 * .failureHandler(authenticationFailureHandler()) .permitAll() )
+				 */
             .logout(logout -> logout
                 .logoutUrl("/api/auth/logout")
                 .logoutSuccessHandler(logoutSuccessHandler())
@@ -80,19 +78,26 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:3001"));
+        configuration.setAllowedOrigins(Arrays.asList(
+            "http://localhost:3000",
+            "http://localhost:3003",
+
+            "http://localhost:5173",
+            "http://localhost:5179"    // add your current frontend port
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(true);   // ✅ this is critical
         configuration.setMaxAge(3600L);
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-    
    
-    @Bean
+  
+    
+       @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }

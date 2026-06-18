@@ -33,7 +33,7 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"}, allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3003"}, allowCredentials = "true")
 public class AuthController {
     
     @Autowired
@@ -60,7 +60,7 @@ public class AuthController {
             
             HttpSession session = request.getSession(true);
             session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, securityContext);
-            System.out.print(loginRequest.getPassword());
+            System.out.print("password "+loginRequest.getPassword());
             User user = (User) authentication.getPrincipal();
             UserDTO userDTO = userService.getUserById(user.getId());
             
@@ -70,10 +70,7 @@ public class AuthController {
             response.put("user", userDTO);
             response.put("role", user.getRole());
             response.put("sessionId", session.getId());
-            response.put(
-                    "passwordChangeRequired",
-                    user.isPasswordChangeRequired()
-            );
+           
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -155,15 +152,5 @@ public class AuthController {
                 Map.of("message",
                        "Password changed successfully"));
     }
-    
-    @GetMapping("/test-mail")
-    public String testMail() {
-
-        emailService.sendWelcomeEmail(
-                "yourpersonalemail@gmail.com",
-                "Temp@123"
-        );
-
-        return "Mail sent";
-    }
+   
 }
