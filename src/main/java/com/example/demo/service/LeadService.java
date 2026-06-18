@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.demo.dto.LeadDTO;
+import com.example.demo.entity.FollowUpStage;
 import com.example.demo.entity.Lead;
 import com.example.demo.entity.User;
 import com.example.demo.repository.LeadRepository;
@@ -123,5 +124,19 @@ public class LeadService {
         dto.setUpdatedAt(lead.getUpdatedAt());
         
         return dto;
+    }
+    
+ // In LeadService.java - Add this method
+    @Transactional
+    public LeadDTO updateLeadStage(Long id, String stage) {
+        Lead lead = leadRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Lead not found with id: " + id));
+        
+        // Convert string to enum
+        FollowUpStage newStage = FollowUpStage.valueOf(stage);
+        lead.setCurrentStage(newStage);
+        
+        Lead updatedLead = leadRepository.save(lead);
+        return convertToDTO(updatedLead);
     }
 }

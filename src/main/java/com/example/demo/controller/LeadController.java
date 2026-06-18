@@ -93,6 +93,7 @@ public class LeadController {
         }
     }
     
+    
     @PutMapping("/{id}")
     public ResponseEntity<?> updateLead(@PathVariable Long id, @Valid @RequestBody Lead leadDetails, Authentication authentication) {
         User currentUser = (User) authentication.getPrincipal();
@@ -161,5 +162,40 @@ public class LeadController {
         User currentUser = (User) authentication.getPrincipal();
         List<LeadDTO> leads = leadService.getLeadsByUser(currentUser.getId());
         return ResponseEntity.ok(leads);
+    }
+    
+ // In LeadController.java - Add this endpoint
+    @PutMapping("/{id}/stage")
+    public ResponseEntity<?> updateLeadStage(
+            @PathVariable Long id, 
+            @RequestBody Map<String, String> request,
+            Authentication authentication) {
+        
+        User currentUser = (User) authentication.getPrincipal();
+        
+        try {
+            String newStage = request.get("stage");
+            LeadDTO existingLead = leadService.getLeadById(id);
+            
+            // Check permissions
+            if (currentUser.getRole() == Role.ADMIN) {
+                // Admin can update any lead
+            } else if (currentUser.getRole() == Role.MANAGER) {
+                List<LeadDTO> teamLeads = leadService.getLeadsByManager(currentUser.getId());
+                boolean hasAccess = teamLeads.stream().anyMatch(l -> l.getId().equals(id));
+                if (!hasAccess) {
+                    return ResponseEntity.status(403).body(Map.of("error", "Access denied"));
+                }
+            } else if (!existingLead.getAssignedToId().equals(currentUser.getId())) {
+                return ResponseEntity.status(403).body(Map.of("error", "Access denied"));
+            }
+            
+            // Update stage
+            Lead updatedLead = leadService.updateLeadStage(id, newStage);
+            return ResponseEntity.ok(updatedLead);
+            
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }
