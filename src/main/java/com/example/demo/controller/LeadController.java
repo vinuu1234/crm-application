@@ -140,8 +140,13 @@ public class LeadController {
         }
     }
     
+ // In LeadController.java - Already have this endpoint, but ensure it's correct
     @PutMapping("/{leadId}/reassign/{userId}")
-    public ResponseEntity<?> reassignLead(@PathVariable Long leadId, @PathVariable Long userId, Authentication authentication) {
+    public ResponseEntity<?> reassignLead(
+            @PathVariable Long leadId, 
+            @PathVariable Long userId, 
+            Authentication authentication) {
+        
         User currentUser = (User) authentication.getPrincipal();
         
         // Admin and Manager can reassign leads
@@ -156,7 +161,6 @@ public class LeadController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
-    
     @GetMapping("/my-leads")
     public ResponseEntity<?> getMyLeads(Authentication authentication) {
         User currentUser = (User) authentication.getPrincipal();
@@ -191,7 +195,7 @@ public class LeadController {
             }
             
             // Update stage
-            Lead updatedLead = leadService.updateLeadStage(id, newStage);
+            LeadDTO updatedLead = leadService.updateLeadStage(id, newStage);
             return ResponseEntity.ok(updatedLead);
             
         } catch (Exception e) {
